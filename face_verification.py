@@ -58,10 +58,7 @@ def detect(
         detector_backend="mtcnn",
         enforce_detection=False,
     )
-    sure_face_objs = [
-        face_obj for face_obj in face_objs if face_obj["confidence"] >= confidence
-    ]
-    return sure_face_objs
+    return face_objs
 
 
 def _normalization(img: np.ndarray) -> np.ndarray:
@@ -101,7 +98,11 @@ def embed(
         Face feature vector
     """
     # Check if image's shape is the same as model's input shape.
-    # if face_img.shape !== embedding_model.input_shape
+    assert face_img.shape == embedding_model.input_shape[1:], (
+        "Input image does not match model input shape. "
+        + f"Image {face_img.shape} and model input shape {embedding_model.input_shape[1:]}"
+    )
+    face_img = face_img.astype(np.float32)
     if normalize:
         face_img = _normalization(face_img)
     embedding = embedding_model.predict(np.expand_dims(face_img, axis=0))[0]
@@ -146,4 +147,4 @@ def calculate_similarity(
         + f"{embedding_1.shape} and {embedding_2.shape}"
     )
     similarity = _cosine(embedding_1, embedding_2)
-    return similarity
+    return float(similarity)

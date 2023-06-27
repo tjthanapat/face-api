@@ -23,5 +23,5 @@ class VerificationResponse(BaseModel):
 
 
 def read_img_file(file) -> np.ndarray:
-    img = np.array(Image.open(BytesIO(file)))
+    img = np.array(Image.open(BytesIO(file)), dtype=np.uint8)
     return img
