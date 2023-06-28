@@ -6,6 +6,7 @@ import numpy as np
 
 from utils import FacialArea
 
+
 @dataclass
 class DeepfaceFaceObj:
     face: np.ndarray
@@ -105,7 +106,7 @@ def embed(
         "Input image does not match model input shape. "
         + f"Image {face_img.shape} and model input shape {embedding_model.input_shape[1:]}"
     )
-    face_img = face_img.astype(np.float32) # ensure image's dtype
+    face_img = face_img.astype(np.float32)  # ensure image's dtype
     if normalize:
         face_img = _normalization(face_img)
     embedding = embedding_model.predict(np.expand_dims(face_img, axis=0))[0]
@@ -113,7 +114,7 @@ def embed(
 
 
 def _cosine(a: np.ndarray, b: np.ndarray):
-    """Calculate cosine similarity between two given
+    """Calculate cosine similarity, range [-1, 1], between two given
     1D arrays sharing the same shape.
 
     Parameters
@@ -135,7 +136,7 @@ def calculate_similarity(
     embedding_1: np.ndarray,
     embedding_2: np.ndarray,
 ) -> float:
-    """Calculate cosine similarity between two given embeddings.
+    """Calculate cosine similarity, range [0, 1], between two given embeddings.
 
     Parameters
     ----------
@@ -151,5 +152,5 @@ def calculate_similarity(
         "Two embeddings must have the same shape, "
         + f"{embedding_1.shape} and {embedding_2.shape}"
     )
-    similarity = _cosine(embedding_1, embedding_2)
+    similarity = (_cosine(embedding_1, embedding_2) + 1) / 2
     return similarity
