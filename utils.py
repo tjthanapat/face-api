@@ -16,12 +16,15 @@ class FaceObj(BaseModel):
     area: FacialArea
 
 
-class VerificationResponse(BaseModel):
+class Verification(BaseModel):
     confidence: float
     faceToVerify: FaceObj
     faceAuthentic: FaceObj
 
 
 def read_img_file(file) -> np.ndarray:
-    img = np.array(Image.open(BytesIO(file)), dtype=np.uint8)
+    img = np.array(
+        Image.open(BytesIO(file)),
+        dtype=np.uint8,
+    )
     return img

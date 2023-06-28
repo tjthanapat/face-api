@@ -4,17 +4,11 @@ from dataclasses import dataclass
 from deepface import DeepFace
 import numpy as np
 
+from utils import FacialArea
+from main import logger
 
 @dataclass
-class FacialArea:
-    x: int
-    y: int
-    w: int
-    h: int
-
-
-@dataclass
-class FaceObj:
+class DeepfaceFaceObj:
     face: np.ndarray
     facial_area: FacialArea
     confidence: float
@@ -34,8 +28,7 @@ backends = [
 def detect(
     img: np.ndarray,
     target_size: Tuple[int, int],
-    confidence: float = 0.99,
-) -> List[FaceObj]:
+) -> List[DeepfaceFaceObj]:
     """Detect and align faces in a given image.
 
     Parameters
@@ -43,8 +36,6 @@ def detect(
     img : array with shape (H, W, C)
     target_size : Tuple[int, int]
         Target size of cropped face region(s).
-    confidence : float, optional
-        Confidence used to filter detected faces, by default 0.99
 
     Returns
     -------
@@ -52,13 +43,26 @@ def detect(
         Each face object contains face (cropped and aligned face image),
         facial_area (x, y, w, h) and confidence.
     """
-    face_objs = DeepFace.extract_faces(
-        img,
-        target_size=target_size,
-        detector_backend="mtcnn",
-        enforce_detection=False,
-    )
-    return face_objs
+    try:
+        face_objs = DeepFace.extract_faces(
+            img,
+            target_size=target_size,
+            detector_backend="mtcnn",
+        )
+        face_objs_ = [
+            dict(
+                face=face_obj["face"],
+                facial_area=face_obj["facial_area"],
+                # DeepFace returns confidence in numpy.float64
+                confidence=face_obj["confidence"].item(),
+            )
+            for face_obj in face_objs
+        ]
+        return face_objs_
+    except ValueError:
+        # DeepFace.extract_faces will raise exception when no face is detected.
+        logger.exception("message")
+        return []
 
 
 def _normalization(img: np.ndarray) -> np.ndarray:
@@ -94,7 +98,7 @@ def embed(
 
     Returns
     -------
-    array
+    1D array
         Face feature vector
     """
     # Check if image's shape is the same as model's input shape.
@@ -102,7 +106,7 @@ def embed(
         "Input image does not match model input shape. "
         + f"Image {face_img.shape} and model input shape {embedding_model.input_shape[1:]}"
     )
-    face_img = face_img.astype(np.float32)
+    face_img = face_img.astype(np.float32) # ensure image's dtype
     if normalize:
         face_img = _normalization(face_img)
     embedding = embedding_model.predict(np.expand_dims(face_img, axis=0))[0]
@@ -110,12 +114,13 @@ def embed(
 
 
 def _cosine(a: np.ndarray, b: np.ndarray):
-    """Calculate cosine similarity between two given arrays with the same shape.
+    """Calculate cosine similarity between two given
+    1D arrays sharing the same shape.
 
     Parameters
     ----------
-    a : array
-    b : array
+    a : 1D array
+    b : 1D array
 
     Returns
     -------
@@ -123,7 +128,8 @@ def _cosine(a: np.ndarray, b: np.ndarray):
         Cosine similarity
     """
     cosine_sim = np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-    return cosine_sim
+    # Convert numpy float to native python float
+    return cosine_sim.item()
 
 
 def calculate_similarity(
@@ -134,8 +140,8 @@ def calculate_similarity(
 
     Parameters
     ----------
-    embedding_1 : array with shape (m,)
-    embedding_2 : array with shape (m,)
+    embedding_1 : 1D array with shape (m,)
+    embedding_2 : 1D array with shape (m,)
 
     Returns
     -------
@@ -147,4 +153,4 @@ def calculate_similarity(
         + f"{embedding_1.shape} and {embedding_2.shape}"
     )
     similarity = _cosine(embedding_1, embedding_2)
-    return float(similarity)
+    return similarity
