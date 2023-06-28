@@ -1,10 +1,10 @@
 import tensorflow as tf
 
 # Turn off interactive logging
-# tf.keras.utils.disable_interactive_logging()  
+# tf.keras.utils.disable_interactive_logging()
 
 # Hide GPU from visible devices
-# tf.config.set_visible_devices([], 'GPU') 
+# tf.config.set_visible_devices([], 'GPU')
 
 
 import uvicorn
@@ -15,7 +15,7 @@ from facenet import load_model
 from utils import read_img_file, Verification, FaceObj
 import json
 from typing import List
-
+import logging
 
 APP_TITLE = "Face Verification API"
 APP_VERSION = "1.0.2"
@@ -25,30 +25,10 @@ Face Verification API.
 
 VERBOSE = True  # Flag for api logging
 
-import logging
-logger = logging.getLogger(APP_TITLE)
-logger.setLevel(logging.DEBUG)
-
 
 # load FaceNet model
 weight_path = "facenet_weights.h5"
 model = load_model(weight_path)
-
-##### Run model inferrence first time after starting api service #####
-def test_inferrence():
-    faces = face_verification.detect(
-        "test_image.png",
-        target_size=model.input_shape[1:3],
-    ) 
-    embedding = face_verification.embed(
-        faces[0]["face"],
-        embedding_model=model,
-    )
-    del faces
-    del embedding
-logger.info("Running inferrence testing")
-test_inferrence()
-######################################################################
 
 
 app = FastAPI(
@@ -57,12 +37,26 @@ app = FastAPI(
     description=APP_DESCRIPTION,
 )
 
+@app.on_event("startup")
+async def startup_event():
+    ##### Run model inferrence testing on starting api service #####
+    logging.info("Running inferrence testing")
+    print("Running inferrence testing")
+    faces = face_verification.detect(
+        "test_image.png",
+        target_size=model.input_shape[1:3],
+    )
+    embedding = face_verification.embed(
+        faces[0]["face"],
+        embedding_model=model,
+    )
+    del faces
+    del embedding
+
 
 @app.get("/")
 def read_root():
-    return """Face Verification API. 
-    Visit `/docs` to use api swagger.
-    """
+    return "Face Verification API. Visit `/docs` to use api swagger."
 
 
 @app.post("/verify/withimage")
@@ -72,7 +66,7 @@ async def verify_face_with_image(
 ) -> Verification:
     # Read images
     if VERBOSE:
-        logger.info("Reading images")
+        logging.info("Reading images")
     if not imgFileToVerify.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -88,7 +82,7 @@ async def verify_face_with_image(
 
     # Detect face in a to-verify image
     if VERBOSE:
-        logger.info("Detecting face in a to-verify image")
+        logging.info("Detecting face in a to-verify image")
     faces_to_verify = face_verification.detect(
         img_to_verify,
         target_size=model.input_shape[1:3],
@@ -99,14 +93,14 @@ async def verify_face_with_image(
             detail="Face could not be detected in a to-verify image.",
         )
     elif len(faces_to_verify) > 1:
-        logger.warning(
+        logging.warning(
             f"{len(faces_to_verify)} faces have been detected in a to-verify image. "
             + "Only one with the highest confidence is used for verification."
         )
 
     # Detect face in an authentic image
     if VERBOSE:
-        logger.info("Detecting face in an authentic image")
+        logging.info("Detecting face in an authentic image")
     faces_authentic = face_verification.detect(
         img_authentic,
         target_size=model.input_shape[1:3],
@@ -117,14 +111,14 @@ async def verify_face_with_image(
             detail="Face could not be detected in an authentic image.",
         )
     elif len(faces_authentic) > 1:
-        logger.warning(
+        logging.warning(
             f"{len(faces_authentic)} faces have been detected in an authentic image. "
             + "Only one with the highest confidence is used for verification."
         )
 
     # Embed face images to feature vectors
     if VERBOSE:
-        logger.info("Embedding face images")
+        logging.info("Embedding face images")
     embedding_to_verify = face_verification.embed(
         faces_to_verify[0]["face"],
         embedding_model=model,
@@ -136,14 +130,14 @@ async def verify_face_with_image(
 
     # Calculate similarity between two embeddings
     if VERBOSE:
-        logger.info("Calculating similarity")
+        logging.info("Calculating similarity")
     confidence = face_verification.calculate_similarity(
         embedding_to_verify,
         embedding_authentic,
     )
 
     if VERBOSE:
-        logger.info("Returning response")
+        logging.info("Returning response")
     response = dict(
         confidence=confidence,
         faceToVerify=dict(
@@ -161,9 +155,9 @@ async def verify_face_with_image(
 @app.post("/detect")
 async def detect_faces(
     imgFile: UploadFile,
-)->List[FaceObj]:
+) -> List[FaceObj]:
     if VERBOSE:
-        logger.info("Reading image")
+        logging.info("Reading image")
     if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -172,7 +166,7 @@ async def detect_faces(
     img = read_img_file(await imgFile.read())
 
     if VERBOSE:
-        logger.info("Detecting faces in an image")
+        logging.info("Detecting faces in an image")
     faces = face_verification.detect(
         img,
         target_size=model.input_shape[1:3],
@@ -182,7 +176,7 @@ async def detect_faces(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Face could not be detected in an image.",
         )
-    
+
     faces_ = [
         dict(
             detectionConfidence=face_obj["confidence"],
@@ -198,7 +192,7 @@ async def detect_and_embed_face(
     imgFile: UploadFile,
 ):
     if VERBOSE:
-        logger.info("Reading image")
+        logging.info("Reading image")
     if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -207,7 +201,7 @@ async def detect_and_embed_face(
     img = read_img_file(await imgFile.read())
 
     if VERBOSE:
-        logger.info("Detecting faces in an image")
+        logging.info("Detecting faces in an image")
     faces = face_verification.detect(
         img,
         target_size=model.input_shape[1:3],
@@ -218,19 +212,19 @@ async def detect_and_embed_face(
             detail="Face could not be detected in an image.",
         )
     elif len(faces) > 1:
-        logger.warning(
+        logging.warning(
             f"{len(faces)} faces have been detected in an image. "
             + "Only one with the highest confidence would be embedded."
         )
 
     if VERBOSE:
-        logger.info("Embedding a face image")
+        logging.info("Embedding a face image")
     embedding = face_verification.embed(
         faces[0]["face"],
         embedding_model=model,
     )
 
-    response = json.dumps(embedding.tolist()) # convert numpy array to list
+    response = json.dumps(embedding.tolist())  # convert numpy array to list
     return response
 
 
