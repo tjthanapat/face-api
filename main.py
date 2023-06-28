@@ -34,6 +34,22 @@ logger.setLevel(logging.DEBUG)
 weight_path = "facenet_weights.h5"
 model = load_model(weight_path)
 
+##### Run model inferrence first time after starting api service #####
+def test_inferrence():
+    faces = face_verification.detect(
+        "test_image.png",
+        target_size=model.input_shape[1:3],
+    ) 
+    embedding = face_verification.embed(
+        faces[0]["face"],
+        embedding_model=model,
+    )
+    del faces
+    del embedding
+logger.info("Running inferrence testing")
+test_inferrence()
+######################################################################
+
 
 app = FastAPI(
     title=APP_TITLE,
