@@ -5,7 +5,6 @@ from deepface import DeepFace
 import numpy as np
 
 from utils import FacialArea
-from main import logger
 
 @dataclass
 class DeepfaceFaceObj:
@@ -61,7 +60,7 @@ def detect(
         return face_objs_
     except ValueError:
         # DeepFace.extract_faces will raise exception when no face is detected.
-        logger.exception("message")
+        # logger.exception("message")
         return []
 
 
