@@ -13,12 +13,13 @@ from fastapi import FastAPI, UploadFile, HTTPException, status
 import face_verification
 from facenet import load_model
 from utils import read_img_file, Verification, FaceObj
+from api_custom_responses import API_STATUS_CODE, API_RESPONSES
 import json
 from typing import List
 import logging
 
 APP_TITLE = "Face Verification API"
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 APP_DESCRIPTION = """
 Face Verification API.
 """
@@ -37,11 +38,6 @@ app = FastAPI(
     description=APP_DESCRIPTION,
 )
 
-
-API_STATUS_CODE = {
-    "NOT_SUPPORTED_IMAGE_FILE": 480,
-    "FACE_NOT_DETECTED": 481,
-}
 
 
 @app.on_event("startup")
@@ -66,7 +62,7 @@ def read_root():
     return "Face Verification API. Visit `/docs` to use api swagger."
 
 
-@app.post("/verify/withimage", response_model=Verification)
+@app.post("/verify/withimage", response_model=Verification, responses=API_RESPONSES)
 async def verify_face_with_image(
     imgFileToVerify: UploadFile,
     imgFileAuthentic: UploadFile,
@@ -173,7 +169,7 @@ async def verify_face_with_image(
     return response
 
 
-@app.post("/detect", response_model=List[FaceObj])
+@app.post("/detect", response_model=List[FaceObj], responses=API_RESPONSES)
 async def detect_faces(
     imgFile: UploadFile,
 ):
@@ -213,7 +209,7 @@ async def detect_faces(
     return faces_
 
 
-@app.post("/detectandembed", response_model=str)
+@app.post("/detectandembed", response_model=str, responses=API_RESPONSES)
 async def detect_and_embed_face(
     imgFile: UploadFile,
 ):
