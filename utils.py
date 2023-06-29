@@ -24,7 +24,7 @@ class Verification(BaseModel):
 
 def read_img_file(file) -> np.ndarray:
     img = np.array(
-        Image.open(BytesIO(file)),
+        Image.open(BytesIO(file)).convert("RGB"),
         dtype=np.uint8,
     )
     return img
