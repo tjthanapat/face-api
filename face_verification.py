@@ -60,8 +60,7 @@ def detect(
         ]
         return face_objs_
     except ValueError:
-        # DeepFace.extract_faces will raise exception when no face is detected.
-        # logger.exception("message")
+        # DeepFace.extract_faces will raise ValueError exception when no face is detected.
         return []
 
 

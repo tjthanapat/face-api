@@ -37,6 +37,7 @@ app = FastAPI(
     description=APP_DESCRIPTION,
 )
 
+
 @app.on_event("startup")
 async def startup_event():
     ##### Run model inferrence testing on starting api service #####
@@ -64,18 +65,26 @@ async def verify_face_with_image(
     imgFileToVerify: UploadFile,
     imgFileAuthentic: UploadFile,
 ) -> Verification:
-    # Read images
+    # Read image files
     if VERBOSE:
-        logging.info("Reading images")
+        logging.info("Recieved /verify/withimage request")
+        logging.info(
+            "Reading image files "
+            + f'(To-Verify Img: "{imgFileToVerify.filename}" Authentic Img: "{imgFileAuthentic.filename}")'
+        )
     if not imgFileToVerify.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "To-Verify image file must be jpg or png format."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image must be jpg or png format.",
+            detail=error_message,
         )
     if not imgFileAuthentic.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Authentic image file must be jpg or png format."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image must be jpg or png format.",
+            detail=error_message,
         )
     img_to_verify = read_img_file(await imgFileToVerify.read())
     img_authentic = read_img_file(await imgFileAuthentic.read())
@@ -88,9 +97,11 @@ async def verify_face_with_image(
         target_size=model.input_shape[1:3],
     )
     if len(faces_to_verify) == 0:
+        error_message = "Face could not be detected in a to-verify image."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Face could not be detected in a to-verify image.",
+            detail=error_message,
         )
     elif len(faces_to_verify) > 1:
         logging.warning(
@@ -106,9 +117,11 @@ async def verify_face_with_image(
         target_size=model.input_shape[1:3],
     )
     if len(faces_authentic) == 0:
+        error_message = "Face could not be detected in an authentic image."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Face could not be detected in an authentic image.",
+            detail=error_message,
         )
     elif len(faces_authentic) > 1:
         logging.warning(
@@ -118,11 +131,13 @@ async def verify_face_with_image(
 
     # Embed face images to feature vectors
     if VERBOSE:
-        logging.info("Embedding face images")
+        logging.info("Embedding face in a to-verify image")
     embedding_to_verify = face_verification.embed(
         faces_to_verify[0]["face"],
         embedding_model=model,
     )
+    if VERBOSE:
+        logging.info("Embedding face in an authentic image")
     embedding_authentic = face_verification.embed(
         faces_authentic[0]["face"],
         embedding_model=model,
@@ -157,11 +172,14 @@ async def detect_faces(
     imgFile: UploadFile,
 ) -> List[FaceObj]:
     if VERBOSE:
-        logging.info("Reading image")
+        logging.info("Recieved /detect request")
+        logging.info(f'Reading image file (Img: "{imgFile.filename}")')
     if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Image file must be jpg or png format."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image must be jpg or png format.",
+            detail=error_message,
         )
     img = read_img_file(await imgFile.read())
 
@@ -172,9 +190,11 @@ async def detect_faces(
         target_size=model.input_shape[1:3],
     )
     if len(faces) == 0:
+        error_message = "Face could not be detected in an image."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Face could not be detected in an image.",
+            detail=error_message,
         )
 
     faces_ = [
@@ -192,11 +212,14 @@ async def detect_and_embed_face(
     imgFile: UploadFile,
 ):
     if VERBOSE:
-        logging.info("Reading image")
+        logging.info("Recieved /detectandembed request")
+        logging.info(f'Reading image file (Img: "{imgFile.filename}")')
     if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Image file must be jpg or png format."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Image must be jpg or png format.",
+            detail=error_message,
         )
     img = read_img_file(await imgFile.read())
 
@@ -207,9 +230,11 @@ async def detect_and_embed_face(
         target_size=model.input_shape[1:3],
     )
     if len(faces) == 0:
+        error_message = "Face could not be detected in an image."
+        logging.error(error_message)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Face could not be detected in an image.",
+            detail=error_message,
         )
     elif len(faces) > 1:
         logging.warning(
@@ -218,7 +243,7 @@ async def detect_and_embed_face(
         )
 
     if VERBOSE:
-        logging.info("Embedding a face image")
+        logging.info("Embedding face in an image")
     embedding = face_verification.embed(
         faces[0]["face"],
         embedding_model=model,
