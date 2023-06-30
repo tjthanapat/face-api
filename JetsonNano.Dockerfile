@@ -18,7 +18,7 @@ ENV LANG en_US.UTF-8
 ENV LANGUAGE en_US:en
 ENV LC_ALL en_US.UTF-8
 
-RUN pip3 install mtcnn==0.1.1
+RUN pip3 install mtcnn==0.1.1 --no-deps
 
 
 # COPY ./facenet_weights.h5 /code/facenet_weights.h5
