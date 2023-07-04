@@ -90,7 +90,7 @@ def detect_opencv(
     # faces = (List[bbox], List[rejectLevels], List[rejectLevels])
     face_objs = list()
 
-    for i in range(faces[0]):
+    for i in range(len(faces[0])):
         (x, y, w, h) = faces[0][i]
         face_img = img[y : y + h, x : x + w, :].copy()
         face_img = cv2.resize(face_img, target_size)
