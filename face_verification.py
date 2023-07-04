@@ -91,12 +91,17 @@ def detect_opencv(
     face_objs = list()
 
     for i in range(len(faces[0])):
-        (x, y, w, h) = faces[0][i]
+        (x, y, w, h) = faces[0][i].tolist()
         face_img = img[y : y + h, x : x + w, :].copy()
         face_img = cv2.resize(face_img, target_size)
         face_obj = dict(
             face=face_img,
-            facial_area=faces[0][i].tolist(),  # [x,y,w,h]
+            facial_area=dict(
+                x=x,
+                y=y,
+                w=w,
+                h=h,
+            ),
             confidence=faces[2].ravel()[i],
         )
         face_objs.append(face_obj)
