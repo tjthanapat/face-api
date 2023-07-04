@@ -39,7 +39,6 @@ app = FastAPI(
 )
 
 
-
 @app.on_event("startup")
 async def startup_event():
     ##### Run model inferrence testing on starting api service #####
@@ -95,6 +94,117 @@ async def verify_face_with_image(
     if VERBOSE:
         logging.info("Detecting face in a to-verify image")
     faces_to_verify = face_verification.detect(
+        img_to_verify,
+        target_size=model.input_shape[1:3],
+    )
+    if len(faces_to_verify) == 0:
+        error_message = "Face could not be detected in a to-verify image."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["FACE_NOT_DETECTED"],
+            detail=error_message,
+        )
+    elif len(faces_to_verify) > 1:
+        logging.warning(
+            f"{len(faces_to_verify)} faces have been detected in a to-verify image. "
+            + "Only one with the highest confidence is used for verification."
+        )
+
+    # Detect face in an authentic image
+    if VERBOSE:
+        logging.info("Detecting face in an authentic image")
+    faces_authentic = face_verification.detect(
+        img_authentic,
+        target_size=model.input_shape[1:3],
+    )
+    if len(faces_authentic) == 0:
+        error_message = "Face could not be detected in an authentic image."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["FACE_NOT_DETECTED"],
+            detail=error_message,
+        )
+    elif len(faces_authentic) > 1:
+        logging.warning(
+            f"{len(faces_authentic)} faces have been detected in an authentic image. "
+            + "Only one with the highest confidence is used for verification."
+        )
+
+    # Embed face images to feature vectors
+    if VERBOSE:
+        logging.info("Embedding face in a to-verify image")
+    embedding_to_verify = face_verification.embed(
+        faces_to_verify[0]["face"],
+        embedding_model=model,
+    )
+    if VERBOSE:
+        logging.info("Embedding face in an authentic image")
+    embedding_authentic = face_verification.embed(
+        faces_authentic[0]["face"],
+        embedding_model=model,
+    )
+
+    # Calculate similarity between two embeddings
+    if VERBOSE:
+        logging.info("Calculating similarity")
+    confidence = face_verification.calculate_similarity(
+        embedding_to_verify,
+        embedding_authentic,
+    )
+
+    if VERBOSE:
+        logging.info("Returning response")
+    response = dict(
+        confidence=confidence,
+        faceToVerify=dict(
+            detectionConfidence=float(faces_to_verify[0]["confidence"]),
+            area=faces_to_verify[0]["facial_area"],
+        ),
+        faceAuthentic=dict(
+            detectionConfidence=float(faces_authentic[0]["confidence"]),
+            area=faces_authentic[0]["facial_area"],
+        ),
+    )
+    return response
+
+
+@app.post(
+    "/verify/withimage/opencv",
+    response_model=Verification,
+    responses=API_RESPONSES,
+)
+async def verify_face_with_image_opencv(
+    imgFileToVerify: UploadFile,
+    imgFileAuthentic: UploadFile,
+):
+    # Read image files
+    if VERBOSE:
+        logging.info("Recieved /verify/withimage request")
+        logging.info(
+            "Reading image files "
+            + f'(To-Verify Img: "{imgFileToVerify.filename}" Authentic Img: "{imgFileAuthentic.filename}")'
+        )
+    if not imgFileToVerify.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "To-Verify image file must be jpg or png format."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["NOT_SUPPORTED_IMAGE_FILE"],
+            detail=error_message,
+        )
+    if not imgFileAuthentic.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Authentic image file must be jpg or png format."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["NOT_SUPPORTED_IMAGE_FILE"],
+            detail=error_message,
+        )
+    img_to_verify = read_img_file(await imgFileToVerify.read())
+    img_authentic = read_img_file(await imgFileAuthentic.read())
+
+    # Detect face in a to-verify image
+    if VERBOSE:
+        logging.info("Detecting face in a to-verify image")
+    faces_to_verify = face_verification.detect_opencv(
         img_to_verify,
         target_size=model.input_shape[1:3],
     )

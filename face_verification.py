@@ -2,13 +2,14 @@ from typing import Tuple, List
 from dataclasses import dataclass
 
 from deepface import DeepFace
+import cv2
 import numpy as np
 
 from utils import FacialArea
 
 
 @dataclass
-class DeepfaceFaceObj:
+class FaceObj:
     face: np.ndarray
     facial_area: FacialArea
     confidence: float
@@ -28,7 +29,7 @@ backends = [
 def detect(
     img: np.ndarray,
     target_size: Tuple[int, int],
-) -> List[DeepfaceFaceObj]:
+) -> List[FaceObj]:
     """Detect and align faces in a given image.
 
     Parameters
@@ -62,6 +63,50 @@ def detect(
     except ValueError:
         # DeepFace.extract_faces will raise ValueError exception when no face is detected.
         return []
+
+
+__face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+
+
+def detect_opencv(
+    img: np.ndarray,
+    target_size: Tuple[int, int],
+) -> List[FaceObj]:
+    """Detect faces in a given image with OpenCV's Haar Cascade
+
+    Parameters
+    ----------
+    img : array with shape (H, W, C)
+    target_size : Tuple[int, int]
+        Target size of cropped face region(s).
+
+    Returns
+    -------
+    face_objs : list of face objects
+        Each face object contains face (cropped face image),
+        facial_area (x, y, w, h) and confidence.
+    """
+    faces = __face_cascade.detectMultiScale3(img, 1.1, 10, outputRejectLevels=True)
+    # faces = (List[bbox], List[rejectLevels], List[rejectLevels])
+    face_objs = list()
+
+    for i in range(faces[0]):
+        (x, y, w, h) = faces[0][i]
+        face_img = img[y : y + h, x : x + w, :].copy()
+        face_img = cv2.resize(face_img, target_size)
+        face_obj = dict(
+            face=face_img,
+            facial_area=faces[0][i].tolist(),  # [x,y,w,h]
+            confidence=faces[2].ravel()[i],
+        )
+        face_objs.append(face_obj)
+
+    face_objs = sorted(
+        face_objs,
+        key=lambda face_obj: face_obj["confidence"],
+        reverse=True,
+    )
+    return face_objs
 
 
 def _normalization(img: np.ndarray) -> np.ndarray:
