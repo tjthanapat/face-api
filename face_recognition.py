@@ -12,7 +12,7 @@ class RecognitionResult(BaseModel):
 
 
 def add_embedding_into_db(
-    db_path: str,
+    db_embeddings_filepath: str,
     subject_id: str,
     embedding: np.ndarray,
 ):
@@ -21,25 +21,25 @@ def add_embedding_into_db(
 
     Parameters
     ----------
-    db_path : str
+    db_embeddings_filepath : str
     subject_id : str
-    embedding : array with shape (m,), like other embedding in db
+    embedding : array with shape (m,), same as other embedding in db
     """
     embedding = embedding.astype(float)  # ensure data type
-    if not os.path.exists(db_path):
+    if not os.path.exists(db_embeddings_filepath):
         subject_arr = np.array([subject_id])
         db = pd.DataFrame(np.concatenate((subject_arr, embedding))[np.newaxis, ...])
         db.columns = ["subject_id"] + [i for i in range(len(embedding))]
-        db.to_csv(db_path, index=False)
+        db.to_csv(db_embeddings_filepath, index=False)
     else:
-        db = pd.read_csv(db_path)
+        db = pd.read_csv(db_embeddings_filepath)
         assert (db.shape[1] - 1) == embedding.shape[0], (
             f"Embedding vector ({embedding.shape[0]},) does not share "
             + f"the same length with others in db ({db.shape[1] - 1},)."
         )
         subject_arr = np.array([subject_id])
         db.loc[len(db)] = np.concatenate((subject_arr, embedding)).ravel()
-        db.to_csv(db_path, index=False)
+        db.to_csv(db_embeddings_filepath, index=False)
 
 
 def calculate_similarities_with_db(
@@ -78,7 +78,7 @@ def calculate_similarities_with_db(
 
 def recognize_face(
     embedding: np.ndarray,
-    db_path: str,
+    db_embeddings_filepath: str,
     top_n: int = 5,
 ) -> List[RecognitionResult]:
     """Recognize face, comparing a given embedding with each embedding
@@ -87,7 +87,7 @@ def recognize_face(
     Parameters
     ----------
     embedding : array with shape (m,)
-    db_path : str
+    db_embeddings_filepath : str
         Path to db csv file.
     top_n : int, optional
         Number of results ordered by confidence. 
@@ -97,7 +97,7 @@ def recognize_face(
     list of result dicts
         Result dicts, each contains subject id and its confidence.
     """
-    db_embeddings = pd.read_csv(db_path)
+    db_embeddings = pd.read_csv(db_embeddings_filepath)
     similarities = calculate_similarities_with_db(embedding, db_embeddings.iloc[:, 1:])
 
     result = pd.concat([db_embeddings["subject_id"], similarities], axis=1)
