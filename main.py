@@ -18,13 +18,13 @@ from api_custom_responses import API_STATUS_CODE, API_RESPONSES
 import json
 from typing import List
 import logging
-
+import pandas as pd
 import os
 
 APP_TITLE = "Face API"
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.1.1"
 APP_DESCRIPTION = """
-Face API - Extraction, Verification, Recognition.
+Face API - Detection, Verification, Recognition.
 """
 
 VERBOSE = True  # Flag for api logging
@@ -478,6 +478,16 @@ async def recognize(
         db_embeddings_filepath=f"{DB_PATH}/embeddings.csv",
     )
     return recognition_results[0]
+
+
+@app.get(
+    "/recognition/db/subjects",
+    response_model=List[str],
+)
+def query_db_subjects():
+    db_embeddings_filepath = f"{DB_PATH}/embeddings.csv"
+    db_embeddings = pd.read_csv(db_embeddings_filepath)
+    return db_embeddings["subject_id"].to_list()
 
 
 if __name__ == "__main__":
