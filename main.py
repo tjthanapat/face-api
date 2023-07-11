@@ -11,6 +11,7 @@ import uvicorn
 from fastapi import FastAPI, UploadFile, HTTPException, status
 
 import face_verification
+import face_recognition
 from facenet import load_model
 from utils import read_img_file, Verification, FaceObj
 from api_custom_responses import API_STATUS_CODE, API_RESPONSES
@@ -18,10 +19,10 @@ import json
 from typing import List
 import logging
 
-APP_TITLE = "Face Verification API"
-APP_VERSION = "1.0.4"
+APP_TITLE = "Face API"
+APP_VERSION = "1.1.0"
 APP_DESCRIPTION = """
-Face Verification API.
+Face API - Extraction, Verification, Recognition.
 """
 
 VERBOSE = True  # Flag for api logging
@@ -37,6 +38,8 @@ app = FastAPI(
     version=APP_VERSION,
     description=APP_DESCRIPTION,
 )
+
+DB_PATH = "db"
 
 
 @app.on_event("startup")
@@ -58,7 +61,7 @@ async def startup_event():
 
 @app.get("/")
 def read_root():
-    return "Face Verification API. Visit `/docs` to use api swagger."
+    return "Face API. Visit `/docs` to use api swagger."
 
 
 @app.post("/verify/withimage", response_model=Verification, responses=API_RESPONSES)
@@ -363,6 +366,113 @@ async def detect_and_embed_face(
 
     response = json.dumps(embedding.tolist())  # convert numpy array to list
     return response
+
+
+@app.post("/recognition/add", response_model=str, responses=API_RESPONSES)
+async def add_face(
+    subject_id: str,
+    imgFile: UploadFile,
+):
+    if VERBOSE:
+        logging.info("Recieved /recognition/add request")
+        logging.info(f'Reading image file (Img: "{imgFile.filename}")')
+    if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Image file must be jpg or png format."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["NOT_SUPPORTED_IMAGE_FILE"],
+            detail=error_message,
+        )
+    img = read_img_file(await imgFile.read())
+
+    if VERBOSE:
+        logging.info("Detecting faces in an image")
+    faces = face_verification.detect(
+        img,
+        target_size=model.input_shape[1:3],
+    )
+    if len(faces) == 0:
+        error_message = "Face could not be detected in an image."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["FACE_NOT_DETECTED"],
+            detail=error_message,
+        )
+    elif len(faces) > 1:
+        logging.warning(
+            f"{len(faces)} faces have been detected in an image. "
+            + "Only one with the highest confidence would be embedded."
+        )
+
+    if VERBOSE:
+        logging.info("Embedding face in an image")
+    embedding = face_verification.embed(
+        faces[0]["face"],
+        embedding_model=model,
+    )
+
+    if VERBOSE:
+        logging.info("Adding embedding into db")
+    face_recognition.add_embedding_into_db(
+        db_embeddings_filepath=f"{DB_PATH}/embeddings.csv",
+        subject_id=subject_id,
+        embedding=embedding,
+    )
+    return "Successfully added."
+
+
+@app.post(
+    "/recognition/recognize",
+    response_model=face_recognition.RecognitionResult,
+    responses=API_RESPONSES,
+)
+async def recognize(
+    imgFile: UploadFile,
+):
+    if VERBOSE:
+        logging.info("Recieved /recognition/recognize request")
+        logging.info(f'Reading image file (Img: "{imgFile.filename}")')
+    if not imgFile.filename.split(".")[-1].lower() in ("jpg", "jpeg", "png"):
+        error_message = "Image file must be jpg or png format."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["NOT_SUPPORTED_IMAGE_FILE"],
+            detail=error_message,
+        )
+    img = read_img_file(await imgFile.read())
+
+    if VERBOSE:
+        logging.info("Detecting faces in an image")
+    faces = face_verification.detect(
+        img,
+        target_size=model.input_shape[1:3],
+    )
+    if len(faces) == 0:
+        error_message = "Face could not be detected in an image."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["FACE_NOT_DETECTED"],
+            detail=error_message,
+        )
+    elif len(faces) > 1:
+        logging.warning(
+            f"{len(faces)} faces have been detected in an image. "
+            + "Only one with the highest confidence would be embedded."
+        )
+
+    if VERBOSE:
+        logging.info("Embedding face in an image")
+    embedding = face_verification.embed(
+        faces[0]["face"],
+        embedding_model=model,
+    )
+    if VERBOSE:
+        logging.info("Recognizing")
+    recognition_results = face_recognition.recognize_face(
+        embedding=embedding,
+        db_embeddings_filepath=f"{DB_PATH}/embeddings.csv",
+    )
+    return recognition_results[0]
 
 
 if __name__ == "__main__":
