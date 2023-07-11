@@ -19,6 +19,8 @@ import json
 from typing import List
 import logging
 
+import os
+
 APP_TITLE = "Face API"
 APP_VERSION = "1.1.0"
 APP_DESCRIPTION = """
@@ -40,6 +42,9 @@ app = FastAPI(
 )
 
 DB_PATH = "db"
+
+os.makedirs(DB_PATH, exist_ok=True)
+os.makedirs(f"{DB_PATH}/images", exist_ok=True)
 
 
 @app.on_event("startup")
