@@ -68,6 +68,9 @@ async def startup_event():
 def read_root():
     return "Face API. Visit `/docs` to use api swagger."
 
+async def read_img(imgFile: UploadFile, fileName):
+    pass
+
 
 @app.post("/verify/withimage", response_model=Verification, responses=API_RESPONSES)
 async def verify_face_with_image(
@@ -434,6 +437,7 @@ async def add_face(
 async def recognize(
     imgFile: UploadFile,
 ):
+    """Recognize subject in input face image with subjects in db."""
     if VERBOSE:
         logging.info("Recieved /recognition/recognize request")
         logging.info(f'Reading image file (Img: "{imgFile.filename}")')
@@ -485,9 +489,27 @@ async def recognize(
     response_model=List[str],
 )
 def query_db_subjects():
+    """Query all subject ids in a db file."""
     db_embeddings_filepath = f"{DB_PATH}/embeddings.csv"
     db_embeddings = pd.read_csv(db_embeddings_filepath)
     return db_embeddings["subject_id"].to_list()
+
+@app.post(
+    "/recognition/remove",
+    response_model=str,
+)
+def remove_face(
+    subject_id: str,
+):
+    if VERBOSE:
+        logging.info("Recieved /recognition/remove request")
+    db_embeddings_filepath = f"{DB_PATH}/embeddings.csv"
+    db_embeddings = pd.read_csv(db_embeddings_filepath)
+    if subject_id not in db_embeddings["subject_id"]:
+        return f"No subject with id '{subject_id}' found."
+    db_embeddings = db_embeddings[db_embeddings["subject_id"] != subject_id]
+    db_embeddings.to_csv(db_embeddings_filepath, index=False)
+    return "Successfully removed."
 
 
 if __name__ == "__main__":
