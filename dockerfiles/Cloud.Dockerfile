@@ -16,13 +16,6 @@ RUN pip install deepface==0.0.79
 
 RUN apt-get update && apt-get install libgl1 -y
 
-# COPY ./facenet_weights.h5 /code/facenet_weights.h5
-# COPY ./facenet.py /code/facenet.py
-# COPY ./test_image.png /code/test_image.png
-# COPY ./face_verification.py /code/face_verification.py
-# COPY ./utils.py /code/utils.py
-# COPY ./main.py /code/main.py
-
 RUN pip install -U --force-reinstall typing-extensions
 RUN pip install python-multipart
 
