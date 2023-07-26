@@ -1,48 +1,9 @@
 import numpy as np
 import pandas as pd
+from typing import Union, List
+from .custom_classes import RecognitionObj
 
-import os
-from pydantic import BaseModel
-from typing import List, Union
-
-
-class RecognitionResult(BaseModel):
-    subject_id: str
-    confidence: float
-
-
-def add_embedding_into_db(
-    db_embeddings_filepath: str,
-    subject_id: str,
-    embedding: np.ndarray,
-):
-    """Add embedding into db csv file. If give db file path does not exist,
-    new file will be created.
-
-    Parameters
-    ----------
-    db_embeddings_filepath : str
-    subject_id : str
-    embedding : array with shape (m,), same as other embedding in db
-    """
-    embedding = embedding.astype(float)  # ensure data type
-    if not os.path.exists(db_embeddings_filepath):
-        subject_arr = np.array([subject_id])
-        db = pd.DataFrame(np.concatenate((subject_arr, embedding))[np.newaxis, ...])
-        db.columns = ["subject_id"] + [i for i in range(len(embedding))]
-        db.to_csv(db_embeddings_filepath, index=False)
-    else:
-        db = pd.read_csv(db_embeddings_filepath)
-        assert (db.shape[1] - 1) == embedding.shape[0], (
-            f"Embedding vector ({embedding.shape[0]},) does not share "
-            + f"the same length with others in db ({db.shape[1] - 1},)."
-        )
-        subject_arr = np.array([subject_id])
-        db.loc[len(db)] = np.concatenate((subject_arr, embedding)).ravel()
-        db.to_csv(db_embeddings_filepath, index=False)
-
-
-def calculate_similarities_with_db(
+def _calculate_similarities_with_db(
     embedding: np.ndarray,
     db_embeddings: Union[np.ndarray, pd.DataFrame],
 ) -> Union[np.ndarray, pd.Series]:
@@ -76,19 +37,19 @@ def calculate_similarities_with_db(
     return cosine_sim.astype(float)
 
 
-def recognize_face(
+def recognize(
     embedding: np.ndarray,
-    db_embeddings_filepath: str,
+    db_embeddings: pd.DataFrame,
     top_n: int = 5,
-) -> List[RecognitionResult]:
+) -> List[RecognitionObj]:
     """Recognize face, comparing a given embedding with each embedding
     in db file. Embedding is vector with length m.
 
     Parameters
     ----------
     embedding : array with shape (m,)
-    db_embeddings_filepath : str
-        Path to db csv file.
+    db_embeddings : dataframe with shape (n, 1 + m)
+        Dataframe contains subject_id col and m embedding cols.
     top_n : int, optional
         Number of results ordered by confidence. 
 
@@ -97,8 +58,7 @@ def recognize_face(
     list of result dicts
         Result dicts, each contains subject id and its confidence.
     """
-    db_embeddings = pd.read_csv(db_embeddings_filepath)
-    similarities = calculate_similarities_with_db(embedding, db_embeddings.iloc[:, 1:])
+    similarities = _calculate_similarities_with_db(embedding, db_embeddings.iloc[:, 1:])
 
     result = pd.concat([db_embeddings["subject_id"], similarities], axis=1)
     result.columns = ["subject_id", "confidence"]

@@ -1,1 +1,1 @@
-# face-verification-api
+# face-api

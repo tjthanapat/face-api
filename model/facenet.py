@@ -1625,7 +1625,7 @@ def InceptionResNetV2(dimension=128):
     return model
 
 
-def load_model(weight_path:str):
+def load_facenet_model(weight_path:str):
     model = InceptionResNetV2()
     model.load_weights(weight_path)
     return model
