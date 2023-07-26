@@ -18,7 +18,11 @@ import functions.manage_db as manage_db
 import functions.utilities as utilities
 from functions.custom_api_responses import API_RESPONSES, API_STATUS_CODE
 
-from typing import List, Literal
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+from typing import List
 from functions.custom_classes import DetectionObj, VerificationObj, RecognitionObj
 
 
