@@ -281,6 +281,7 @@ async def verify_face(
         API_STATUS_CODE["NOT_SUPPORTED_IMAGE_FILE"]: API_RESPONSES["NOT_SUPPORTED_IMAGE_FILE"],
         API_STATUS_CODE["FACE_NOT_DETECTED"]: API_RESPONSES["FACE_NOT_DETECTED"],
         API_STATUS_CODE["NO_DB_FILE_FOUND"]: API_RESPONSES["NO_DB_FILE_FOUND"],
+        API_STATUS_CODE["NO_EMBEDDING_IN_DB"]: API_RESPONSES["NO_EMBEDDING_IN_DB"],
         # fmt: on
     },
 )
@@ -329,6 +330,14 @@ async def recognize_face(
         logging.info("Getting embedding db")
     db_filepath = f"{DB_PATH}/embeddings.csv"
     db = manage_db.get_db(db_filepath)
+    if len(db) == 0:
+        error_message = "There is no embedding in db."
+        logging.error(error_message)
+        raise HTTPException(
+            status_code=API_STATUS_CODE["NO_EMBEDDING_IN_DB"],
+            detail=error_message,
+        )
+
 
     if VERBOSE:
         logging.info("Recognizing")

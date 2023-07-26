@@ -81,7 +81,7 @@ def remove_subject(db_filepath: str, subject_id: str):
     db = get_db(db_filepath)
     if subject_id not in db["subject_id"].values:
         error_message = (
-            f"There is not embedding with a given subject id {subject_id} in db."
+            f"There is no embedding with a given subject id {subject_id} in db."
         )
         logging.error(error_message)
         raise HTTPException(
