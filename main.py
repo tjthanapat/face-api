@@ -425,6 +425,7 @@ async def query_subjects_in_db():
     responses={
         # fmt: off
         API_STATUS_CODE["NO_DB_FILE_FOUND"]: API_RESPONSES["NO_DB_FILE_FOUND"],
+        API_STATUS_CODE["NO_SUBJECT_ID_IN_DB"]: API_RESPONSES["NO_SUBJECT_ID_IN_DB"],
         # fmt: on
     },
 )
