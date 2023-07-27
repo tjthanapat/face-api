@@ -27,7 +27,7 @@ from functions.custom_classes import DetectionObj, VerificationObj, RecognitionO
 
 
 APP_TITLE = "Face API"
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 APP_DESCRIPTION = """
 Face API - Detection, Verification, Recognition.
 
@@ -92,7 +92,9 @@ def read_root():
 async def detect_faces_mtcnn(
     imgFile: UploadFile,
 ):
-    """Detecting face(s) in a given image with MTCNN."""
+    """Detecting face(s) in a given image with MTCNN.\n
+    Note: Detected area is a rectangle area [x,y,w,h]
+    where (x,y) is top-left corner with width w and height h."""
     if VERBOSE:
         logging.info("Recieved /detect/mtcnn request")
         logging.info(f'Reading image file (Img: "{imgFile.filename}")')
@@ -136,8 +138,10 @@ async def detect_faces_mtcnn(
 async def detect_faces_opencv(
     imgFile: UploadFile,
 ):
-    """Detecting face(s) in a given image with OpenCV's Haar Cascade.
-    \nNote: Detection confidence is not in range 0-1.
+    """Detecting face(s) in a given image with OpenCV's Haar Cascade.\n
+    Note: Detection confidence is not in range 0-1.
+    Detected area is a rectangle area [x,y,w,h]
+    where (x,y) is top-left corner with width w and height h.
     """
     if VERBOSE:
         logging.info("Recieved /detect/opencv request")
@@ -337,7 +341,6 @@ async def recognize_face(
             status_code=API_STATUS_CODE["NO_EMBEDDING_IN_DB"],
             detail=error_message,
         )
-
 
     if VERBOSE:
         logging.info("Recognizing")
