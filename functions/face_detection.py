@@ -3,6 +3,8 @@ import cv2
 from typing import List, Tuple, Union
 from deepface import DeepFace
 from .custom_classes import FaceObj
+import os
+
 
 def detect_mtcnn(
     img: Union[np.ndarray,str],
@@ -43,8 +45,7 @@ def detect_mtcnn(
         # DeepFace.extract_faces will raise ValueError exception when no face is detected.
         return []
 
-
-__face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+_face_cascade = cv2.CascadeClassifier("model/haarcascade_frontalface_default.xml")
 
 
 def detect_opencv(
@@ -65,7 +66,7 @@ def detect_opencv(
         Each face object contains face (cropped face image),
         facial_area (x, y, w, h) and confidence.
     """
-    faces = __face_cascade.detectMultiScale3(img, 1.1, 10, outputRejectLevels=True)
+    faces = _face_cascade.detectMultiScale3(img, 1.1, 10, outputRejectLevels=True)
     # faces = (List[bbox], List[rejectLevels], List[rejectLevels])
     face_objs = list()
 
