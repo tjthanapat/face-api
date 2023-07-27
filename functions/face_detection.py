@@ -3,11 +3,10 @@ import cv2
 from typing import List, Tuple, Union
 from deepface import DeepFace
 from .custom_classes import FaceObj
-import os
 
 
 def detect_mtcnn(
-    img: Union[np.ndarray,str],
+    img: Union[np.ndarray, str],
     target_size: Tuple[int, int],
 ) -> List[FaceObj]:
     """Detect and align faces in a given image with MTCNN.
@@ -44,6 +43,7 @@ def detect_mtcnn(
     except ValueError:
         # DeepFace.extract_faces will raise ValueError exception when no face is detected.
         return []
+
 
 _face_cascade = cv2.CascadeClassifier("model/haarcascade_frontalface_default.xml")
 
